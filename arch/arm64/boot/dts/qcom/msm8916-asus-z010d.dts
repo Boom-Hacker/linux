@@ -73,8 +73,8 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&spk_ext_pa_default>;
 
-		enable-gpios = <&msmgpio 112 GPIO_ACTIVE_HIGH>;
-		aw8738,mode = <2>;
+		mode-gpios = <&msmgpio 112 GPIO_ACTIVE_HIGH>;
+		awinic,mode = <2>;
 		sound-name-prefix = "Speaker Amp";
 	};
 
@@ -236,8 +236,15 @@
 	status = "okay";
 
 	model = "bq-paella";
+	widgets =
+		"Speaker", "Speaker",
+		"Headphone", "Headphones";
+	pin-switches = "Speaker";
 	audio-routing =
-		"Speaker Amp IN", "HPH_R_EXT",
+		"Speaker", "Speaker Amp OUT",
+		"Speaker Amp IN", "HPH_R",
+		"Headphones", "HPH_L",
+		"Headphones", "HPH_R",
 		"AMIC1", "MIC BIAS Internal1",
 		"AMIC2", "MIC BIAS Internal2",
 		"AMIC3", "MIC BIAS Internal3";

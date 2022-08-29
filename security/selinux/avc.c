@@ -44,6 +44,9 @@
 #define avc_cache_stats_incr(field)	do {} while (0)
 #endif
 
+#undef CREATE_TRACE_POINTS
+#include <trace/hooks/avc.h>
+
 struct avc_entry {
 	u32			ssid;
 	u32			tsid;
@@ -441,6 +444,7 @@ static void avc_node_free(struct rcu_head *rhead)
 
 static void avc_node_delete(struct selinux_avc *avc, struct avc_node *node)
 {
+	trace_android_rvh_selinux_avc_node_delete(node);
 	hlist_del_rcu(&node->list);
 	call_rcu(&node->rhead, avc_node_free);
 	atomic_dec(&avc->avc_cache.active_nodes);
@@ -457,6 +461,7 @@ static void avc_node_kill(struct selinux_avc *avc, struct avc_node *node)
 static void avc_node_replace(struct selinux_avc *avc,
 			     struct avc_node *new, struct avc_node *old)
 {
+	trace_android_rvh_selinux_avc_node_replace(old, new);
 	hlist_replace_rcu(&old->list, &new->list);
 	call_rcu(&old->rhead, avc_node_free);
 	atomic_dec(&avc->avc_cache.active_nodes);
@@ -547,6 +552,7 @@ static inline struct avc_node *avc_search_node(struct selinux_avc *avc,
 
 /**
  * avc_lookup - Look up an AVC entry.
+ * @avc: the access vector cache
  * @ssid: source security identifier
  * @tsid: target security identifier
  * @tclass: target security class
@@ -565,8 +571,10 @@ static struct avc_node *avc_lookup(struct selinux_avc *avc,
 	avc_cache_stats_incr(lookups);
 	node = avc_search_node(avc, ssid, tsid, tclass);
 
-	if (node)
+	if (node) {
+		trace_android_rvh_selinux_avc_lookup(node, ssid, tsid, tclass);
 		return node;
+	}
 
 	avc_cache_stats_incr(misses);
 	return NULL;
@@ -597,6 +605,7 @@ static int avc_latest_notif_update(struct selinux_avc *avc,
 
 /**
  * avc_insert - Insert an AVC entry.
+ * @avc: the access vector cache
  * @ssid: source security identifier
  * @tsid: target security identifier
  * @tclass: target security class
@@ -650,6 +659,7 @@ static struct avc_node *avc_insert(struct selinux_avc *avc,
 		}
 	}
 	hlist_add_head_rcu(&node->list, head);
+	trace_android_rvh_selinux_avc_insert(node);
 found:
 	spin_unlock_irqrestore(lock, flag);
 	return node;
@@ -825,9 +835,14 @@ out:
 
 /**
  * avc_update_node - Update an AVC entry
+ * @avc: the access vector cache
  * @event : Updating event
  * @perms : Permission mask bits
- * @ssid,@tsid,@tclass : identifier of an AVC entry
+ * @driver: xperm driver information
+ * @xperm: xperm permissions
+ * @ssid: AVC entry source sid
+ * @tsid: AVC entry target sid
+ * @tclass : AVC entry target object class
  * @seqno : sequence number when decision was made
  * @xpd: extended_perms_decision to be added to the node
  * @flags: the AVC_* flags, e.g. AVC_EXTENDED_PERMS, or 0.
@@ -928,6 +943,7 @@ out:
 
 /**
  * avc_flush - Flush the cache
+ * @avc: the access vector cache
  */
 static void avc_flush(struct selinux_avc *avc)
 {
@@ -956,6 +972,7 @@ static void avc_flush(struct selinux_avc *avc)
 
 /**
  * avc_ss_reset - Flush the cache and revalidate migrated permissions.
+ * @avc: the access vector cache
  * @seqno: policy sequence number
  */
 int avc_ss_reset(struct selinux_avc *avc, u32 seqno)
@@ -1105,6 +1122,7 @@ decision:
 
 /**
  * avc_has_perm_noaudit - Check permissions but perform no auditing.
+ * @state: SELinux state
  * @ssid: source security identifier
  * @tsid: target security identifier
  * @tclass: target security class
@@ -1156,6 +1174,7 @@ inline int avc_has_perm_noaudit(struct selinux_state *state,
 
 /**
  * avc_has_perm - Check permissions and perform any appropriate auditing.
+ * @state: SELinux state
  * @ssid: source security identifier
  * @tsid: target security identifier
  * @tclass: target security class

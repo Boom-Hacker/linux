@@ -92,7 +92,7 @@
 		vddio-supply = <&pm8916_l5>;
 
 		interrupt-parent = <&msmgpio>;
-		interrupts = <115 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <115 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "INT1";
 
 		st,drdy-int-pin = <1>;
@@ -118,8 +118,8 @@
 		touchscreen-size-y = <1280>;
 		linux,keycodes = <KEY_APPSELECT KEY_BACK>;
 
-		vdd-supply = <&reg_vdd_tsp>;
-		vddo-supply = <&pm8916_l16>;
+		vcca-supply = <&reg_vdd_tsp>;
+		vdd-supply = <&pm8916_l5>;
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&tsp_int_default>;

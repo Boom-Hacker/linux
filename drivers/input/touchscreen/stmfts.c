@@ -68,6 +68,7 @@
 #define STMFTS_DATA_MAX_SIZE	(STMFTS_EVENT_SIZE * STMFTS_STACK_DEPTH)
 #define STMFTS_MAX_FINGERS	10
 #define STMFTS_DEV_NAME		"stmfts"
+#define STMFTS_RETRY_COUNT	3
 
 enum stmfts_regulators {
 	STMFTS_REGULATOR_VDD,
@@ -317,19 +318,20 @@ static irqreturn_t stmfts_irq_handler(int irq, void *dev)
 
 static int stmfts_command(struct stmfts_data *sdata, const u8 cmd)
 {
-	int err;
+	int err, retry;
 
 	reinit_completion(&sdata->cmd_done);
 
-	err = i2c_smbus_write_byte(sdata->client, cmd);
-	if (err)
-		return err;
+	for (retry = 0; retry < STMFTS_RETRY_COUNT; retry++) {
+		err = i2c_smbus_write_byte(sdata->client, cmd);
+		if (err)
+			return err;
 
-	if (!wait_for_completion_timeout(&sdata->cmd_done,
-					 msecs_to_jiffies(1000)))
-		return -ETIMEDOUT;
-
-	return 0;
+		if (wait_for_completion_timeout(&sdata->cmd_done,
+						msecs_to_jiffies(1000)))
+			return 0;
+	}
+	return -ETIMEDOUT;
 }
 
 static int stmfts_input_open(struct input_dev *dev)
@@ -339,11 +341,11 @@ static int stmfts_input_open(struct input_dev *dev)
 
 	err = pm_runtime_get_sync(&sdata->client->dev);
 	if (err < 0)
-		return err;
+		goto out;
 
 	err = i2c_smbus_write_byte(sdata->client, STMFTS_MS_MT_SENSE_ON);
 	if (err)
-		return err;
+		goto out;
 
 	mutex_lock(&sdata->mutex);
 	sdata->running = true;
@@ -366,7 +368,9 @@ static int stmfts_input_open(struct input_dev *dev)
 				 "failed to enable touchkey\n");
 	}
 
-	return 0;
+out:
+	pm_runtime_put_noidle(&sdata->client->dev);
+	return err;
 }
 
 static void stmfts_input_close(struct input_dev *dev)

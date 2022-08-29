@@ -18,6 +18,7 @@
 #include <linux/regmap.h>
 #include <linux/slab.h>
 #include <linux/thermal.h>
+#include "../thermal_hwmon.h"
 #include "tsens.h"
 
 /**
@@ -603,22 +604,21 @@ int get_temp_tsens_valid(const struct tsens_sensor *s, int *temp)
 	int ret;
 
 	/* VER_0 doesn't have VALID bit */
-	if (tsens_version(priv) >= VER_0_1) {
-		ret = regmap_field_read(priv->rf[valid_idx], &valid);
-		if (ret)
-			return ret;
-		while (!valid) {
-			/* Valid bit is 0 for 6 AHB clock cycles.
-			 * At 19.2MHz, 1 AHB clock is ~60ns.
-			 * We should enter this loop very, very rarely.
-			 */
-			ndelay(400);
-			ret = regmap_field_read(priv->rf[valid_idx], &valid);
-			if (ret)
-				return ret;
-		}
-	}
+	if (tsens_version(priv) == VER_0)
+		goto get_temp;
 
+	/* Valid bit is 0 for 6 AHB clock cycles.
+	 * At 19.2MHz, 1 AHB clock is ~60ns.
+	 * We should enter this loop very, very rarely.
+	 * Wait 1 us since it's the min of poll_timeout macro.
+	 * Old value was 400 ns.
+	 */
+	ret = regmap_field_read_poll_timeout(priv->rf[valid_idx], valid,
+					     valid, 1, 20 * USEC_PER_MSEC);
+	if (ret)
+		return ret;
+
+get_temp:
 	/* Valid bit is set, OK to read the temperature */
 	*temp = tsens_hw_to_mC(s, temp_idx);
 
@@ -821,17 +821,22 @@ int __init init_common(struct tsens_priv *priv)
 		ret = PTR_ERR(priv->rf[TSENS_EN]);
 		goto err_put_device;
 	}
-	/* in VER_0 TSENS need to be explicitly enabled */
-	if (tsens_version(priv) == VER_0)
-		regmap_field_write(priv->rf[TSENS_EN], 1);
 
-	ret = regmap_field_read(priv->rf[TSENS_EN], &enabled);
-	if (ret)
-		goto err_put_device;
-	if (!enabled) {
-		dev_err(dev, "%s: device not enabled\n", __func__);
-		ret = -ENODEV;
-		goto err_put_device;
+	if (!priv->srot_locked) {
+		/* in VER_0 TSENS need to be explicitly enabled */
+		if (tsens_version(priv) == VER_0)
+			regmap_field_write(priv->rf[TSENS_EN], 1);
+
+		ret = regmap_field_read(priv->rf[TSENS_EN], &enabled);
+		if (ret)
+			goto err_put_device;
+		if (!enabled) {
+			dev_err(dev, "%s: device not enabled\n", __func__);
+			ret = -ENODEV;
+			goto err_put_device;
+		}
+	} else {
+		dev_warn(dev, FW_BUG "SROT is locked, assuming TSENS is enabled\n");
 	}
 
 	priv->rf[SENSOR_EN] = devm_regmap_field_alloc(dev, priv->srot_map,
@@ -1061,6 +1066,10 @@ static int tsens_register(struct tsens_priv *priv)
 		priv->sensor[i].tzd = tzd;
 		if (priv->ops->enable)
 			priv->ops->enable(priv, i);
+
+		if (devm_thermal_add_hwmon_sysfs(tzd))
+			dev_warn(priv->dev,
+				 "Failed to add hwmon sysfs attributes\n");
 	}
 
 	/* VER_0 require to set MIN and MAX THRESH
@@ -1137,6 +1146,7 @@ static int tsens_probe(struct platform_device *pdev)
 	}
 	priv->feat = data->feat;
 	priv->fields = data->fields;
+	priv->srot_locked = of_property_read_bool(np, "qcom,srot-locked");
 
 	platform_set_drvdata(pdev, priv);
 

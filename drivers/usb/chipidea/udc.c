@@ -49,6 +49,8 @@ ctrl_endpt_in_desc = {
 	.wMaxPacketSize  = cpu_to_le16(CTRL_PAYLOAD_MAX),
 };
 
+static int reprime_dtd(struct ci_hdrc *ci, struct ci_hw_ep *hwep,
+		       struct td_node *node);
 /**
  * hw_ep_bit: calculates the bit number
  * @num: endpoint number
@@ -599,6 +601,12 @@ static int _hardware_enqueue(struct ci_hw_ep *hwep, struct ci_hw_req *hwreq)
 
 		prevlastnode->ptr->next = cpu_to_le32(next);
 		wmb();
+
+		if (ci->rev == CI_REVISION_22) {
+			if (!hw_read(ci, OP_ENDPTSTAT, BIT(n)))
+				reprime_dtd(ci, hwep, prevlastnode);
+		}
+
 		if (hw_read(ci, OP_ENDPTPRIME, BIT(n)))
 			goto done;
 		do {
@@ -2129,8 +2137,7 @@ void ci_hdrc_gadget_destroy(struct ci_hdrc *ci)
 static int udc_id_switch_for_device(struct ci_hdrc *ci)
 {
 	if (ci->platdata->pins_device)
-		pinctrl_select_state(ci->platdata->pctl,
-				     ci->platdata->pins_device);
+		ci_platform_set_pin_state(ci, ci->platdata->pins_device);
 
 	if (ci->is_otg)
 		/* Clear and enable BSV irq */
@@ -2144,7 +2151,7 @@ static void udc_id_switch_for_host(struct ci_hdrc *ci)
 {
 	/*
 	 * host doesn't care B_SESSION_VALID event
-	 * so clear and disbale BSV irq
+	 * so clear and disable BSV irq
 	 */
 	if (ci->is_otg)
 		hw_write_otgsc(ci, OTGSC_BSVIE | OTGSC_BSVIS, OTGSC_BSVIS);
@@ -2152,8 +2159,7 @@ static void udc_id_switch_for_host(struct ci_hdrc *ci)
 	ci->vbus_active = 0;
 
 	if (ci->platdata->pins_device && ci->platdata->pins_default)
-		pinctrl_select_state(ci->platdata->pctl,
-				     ci->platdata->pins_default);
+		ci_platform_set_pin_state(ci, ci->platdata->pins_default);
 }
 
 /**

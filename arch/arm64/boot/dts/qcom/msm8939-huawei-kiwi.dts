@@ -29,10 +29,10 @@
 	};
 
 	reserved-memory {
-		/delete-node/ venus@90000000;
+		/delete-node/ venus@8c300000;
 		/delete-node/ rmtfs@86681000;
 		/delete-node/ rfsa@867e0000;
-		/delete-node/ mba@8ea00000;
+		/delete-node/ mba@8cb00000;
 
 		cont_splash_mem: framebuffer@83000000 {
 			compatible = "removed-dma-pool";
@@ -256,9 +256,23 @@
 	status = "okay";
 };
 
-&dsi0 {
+&dsi0_out {
+	data-lanes = <0 1 2 3>;
+	remote-endpoint = <&panel_in>;
+};
+
+&lpass {
+	status = "okay";
+};
+
+&mdss {
+	status = "okay";
+};
+
+&mdss_dsi0 {
+	status = "okay";
 	panel@0 {
-		compatible = "cmi,nt35532-5p5xa";
+		compatible = "huawei,kiwi-panel";
 		reg = <0>;
 
 		reset-gpios = <&msmgpio 25 GPIO_ACTIVE_LOW>;
@@ -271,21 +285,9 @@
 	};
 };
 
-&dsi0_out {
-	data-lanes = <0 1 2 3>;
-	remote-endpoint = <&panel_in>;
-};
-
-&dsi_phy0 {
+&mdss_dsi0_phy {
+	status = "okay";
 	qcom,dsi-phy-regulator-ldo-mode;
-};
-
-&lpass {
-	status = "okay";
-};
-
-&mdss {
-	status = "okay";
 };
 
 &pm8916_bms {
@@ -303,8 +305,11 @@
 	status = "okay";
 };
 
-&pronto {
+&remoteproc_pronto {
 	status = "okay";
+	iris {
+		compatible = "qcom,wcn3620";
+	};
 };
 
 &sdhc_1 {

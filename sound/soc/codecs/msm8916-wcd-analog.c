@@ -321,10 +321,6 @@ static const struct soc_enum hph_enum = SOC_ENUM_SINGLE_VIRT(
 static const struct snd_kcontrol_new ear_mux = SOC_DAPM_ENUM("EAR_S", hph_enum);
 static const struct snd_kcontrol_new hphl_mux = SOC_DAPM_ENUM("HPHL", hph_enum);
 static const struct snd_kcontrol_new hphr_mux = SOC_DAPM_ENUM("HPHR", hph_enum);
-static const struct snd_kcontrol_new hphl_ext_mux = SOC_DAPM_ENUM("HPHL EXT",
-								  hph_enum);
-static const struct snd_kcontrol_new hphr_ext_mux = SOC_DAPM_ENUM("HPHR EXT",
-								  hph_enum);
 
 /* ADC2 MUX */
 static const struct soc_enum adc2_enum = SOC_ENUM_SINGLE_VIRT(
@@ -829,27 +825,22 @@ static const struct snd_soc_dapm_route pm8916_wcd_analog_audio_map[] = {
 	{"EAR PA", NULL, "EAR CP"},
 
 	/* Headset (RX MIX1 and RX MIX2) */
-	{"HPH_L", NULL, "HPHL"},
-	{"HPH_R", NULL, "HPHR"},
-	{"HPHL", "Switch", "HPHL PA"},
-	{"HPHR", "Switch", "HPHR PA"},
-
-	{"HPH_L_EXT", NULL, "HPHL EXT"},
-	{"HPHL EXT", "Switch", "HPHL PA"},
-	{"HPH_R_EXT", NULL, "HPHR EXT"},
-	{"HPHR EXT", "Switch", "HPHR PA"},
+	{"HPH_L", NULL, "HPHL PA"},
+	{"HPH_R", NULL, "HPHR PA"},
 
 	{"HPHL DAC", NULL, "EAR_HPHL_CLK"},
 	{"HPHR DAC", NULL, "EAR_HPHR_CLK"},
 
 	{"CP", NULL, "NCP_CLK"},
 
-	{"HPHL PA", NULL, "HPHL DAC"},
-	{"HPHR PA", NULL, "HPHR DAC"},
+	{"HPHL PA", NULL, "HPHL"},
+	{"HPHR PA", NULL, "HPHR"},
 	{"HPHL PA", NULL, "CP"},
 	{"HPHL PA", NULL, "RX_BIAS"},
 	{"HPHR PA", NULL, "CP"},
 	{"HPHR PA", NULL, "RX_BIAS"},
+	{"HPHL", "Switch", "HPHL DAC"},
+	{"HPHR", "Switch", "HPHR DAC"},
 
 	{"RX_BIAS", NULL, "DAC_REF"},
 
@@ -884,12 +875,6 @@ static const struct snd_soc_dapm_widget pm8916_wcd_analog_dapm_widgets[] = {
 	SND_SOC_DAPM_OUTPUT("EAR"),
 	SND_SOC_DAPM_OUTPUT("HPH_L"),
 	SND_SOC_DAPM_OUTPUT("HPH_R"),
-
-	/* There may be an external speaker amplifier connected to HPHL/HPHR */
-	SND_SOC_DAPM_OUTPUT("HPH_L_EXT"),
-	SND_SOC_DAPM_OUTPUT("HPH_R_EXT"),
-	SND_SOC_DAPM_MUX("HPHL EXT", SND_SOC_NOPM, 0, 0, &hphl_ext_mux),
-	SND_SOC_DAPM_MUX("HPHR EXT", SND_SOC_NOPM, 0, 0, &hphr_ext_mux),
 
 	/* RX stuff */
 	SND_SOC_DAPM_SUPPLY("INT_LDO_H", SND_SOC_NOPM, 1, 0, NULL, 0),
@@ -1282,8 +1267,10 @@ static int pm8916_wcd_analog_spmi_probe(struct platform_device *pdev)
 		priv->jack_gpio.data = priv;
 	} else {
 		irq = platform_get_irq_byname(pdev, "mbhc_switch_int");
-		if (irq < 0)
-			return irq;
+		if (irq < 0) {
+			ret = irq;
+			goto err_disable_clk;
+		}
 
 		ret = devm_request_threaded_irq(dev, irq, NULL,
 				       pm8916_mbhc_switch_irq_handler,
@@ -1296,8 +1283,10 @@ static int pm8916_wcd_analog_spmi_probe(struct platform_device *pdev)
 
 	if (priv->mbhc_btn_enabled) {
 		irq = platform_get_irq_byname(pdev, "mbhc_but_press_det");
-		if (irq < 0)
-			return irq;
+		if (irq < 0) {
+			ret = irq;
+			goto err_disable_clk;
+		}
 
 		ret = devm_request_threaded_irq(dev, irq, NULL,
 				       mbhc_btn_press_irq_handler,
@@ -1308,8 +1297,10 @@ static int pm8916_wcd_analog_spmi_probe(struct platform_device *pdev)
 			dev_err(dev, "cannot request mbhc button press irq\n");
 
 		irq = platform_get_irq_byname(pdev, "mbhc_but_rel_det");
-		if (irq < 0)
-			return irq;
+		if (irq < 0) {
+			ret = irq;
+			goto err_disable_clk;
+		}
 
 		ret = devm_request_threaded_irq(dev, irq, NULL,
 				       mbhc_btn_release_irq_handler,
@@ -1326,6 +1317,10 @@ static int pm8916_wcd_analog_spmi_probe(struct platform_device *pdev)
 	return devm_snd_soc_register_component(dev, &pm8916_wcd_analog,
 				      pm8916_wcd_analog_dai,
 				      ARRAY_SIZE(pm8916_wcd_analog_dai));
+
+err_disable_clk:
+	clk_disable_unprepare(priv->mclk);
+	return ret;
 }
 
 static int pm8916_wcd_analog_spmi_remove(struct platform_device *pdev)

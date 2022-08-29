@@ -3,7 +3,6 @@
 // Copyright (c) 2018, The Linux Foundation. All rights reserved.
 
 #include <linux/module.h>
-#include <sound/simple_card_utils.h>
 #include "common.h"
 
 int qcom_snd_parse_of(struct snd_soc_card *card)
@@ -46,7 +45,7 @@ int qcom_snd_parse_of(struct snd_soc_card *card)
 			return ret;
 	}
 
-	ret = asoc_simple_parse_pin_switches(card, NULL);
+	ret = snd_soc_of_parse_pin_switches(card, "pin-switches");
 	if (ret)
 		return ret;
 
@@ -105,9 +104,8 @@ int qcom_snd_parse_of(struct snd_soc_card *card)
 
 		ret = snd_soc_of_get_dai_name(cpu, &link->cpus->dai_name);
 		if (ret) {
-			if (ret != -EPROBE_DEFER)
-				dev_err(card->dev, "%s: error getting cpu dai name: %d\n",
-					link->name, ret);
+			dev_err_probe(card->dev, ret,
+				      "%s: error getting cpu dai name\n", link->name);
 			goto err;
 		}
 
@@ -127,9 +125,8 @@ int qcom_snd_parse_of(struct snd_soc_card *card)
 		if (codec) {
 			ret = snd_soc_of_get_dai_link_codecs(dev, codec, link);
 			if (ret < 0) {
-				if (ret != -EPROBE_DEFER)
-					dev_err(card->dev, "%s: codec dai not found: %d\n",
-						link->name, ret);
+				dev_err_probe(card->dev, ret,
+					      "%s: codec dai not found\n", link->name);
 				goto err;
 			}
 

@@ -16,8 +16,8 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&spk_ext_pa_left_default>;
 
-		enable-gpios = <&msmgpio 119 GPIO_ACTIVE_HIGH>;
-		aw8738,mode = <3>;
+		mode-gpios = <&msmgpio 119 GPIO_ACTIVE_HIGH>;
+		awinic,mode = <3>;
 		sound-name-prefix = "Speaker Amp L";
 	};
 
@@ -28,8 +28,8 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&spk_ext_pa_right_default>;
 
-		enable-gpios = <&msmgpio 121 GPIO_ACTIVE_HIGH>;
-		aw8738,mode = <3>;
+		mode-gpios = <&msmgpio 121 GPIO_ACTIVE_HIGH>;
+		awinic,mode = <3>;
 		sound-name-prefix = "Speaker Amp R";
 	};
 
@@ -104,9 +104,17 @@
 	status = "okay";
 
 	model = "wt86528";
+	widgets =
+		"Speaker", "Speaker",
+		"Headphone", "Headphones";
+	pin-switches = "Speaker", "Headphones";
 	audio-routing =
-		"Speaker Amp L IN", "HPH_L_EXT",
-		"Speaker Amp R IN", "HPH_R_EXT",
+		"Speaker", "Speaker Amp L OUT",
+		"Speaker", "Speaker Amp R OUT",
+		"Speaker Amp L IN", "HPH_L",
+		"Speaker Amp R IN", "HPH_R",
+		"Headphones", "Headphones Switch OUTL",
+		"Headphones", "Headphones Switch OUTR",
 		"Headphones Switch INL", "HPH_L",
 		"Headphones Switch INR", "HPH_R",
 		"AMIC1", "MIC BIAS External1",

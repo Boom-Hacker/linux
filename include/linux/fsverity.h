@@ -221,7 +221,7 @@ static inline void fsverity_enqueue_verify_work(struct work_struct *work)
  *
  * This checks whether ->i_verity_info has been set.
  *
- * Filesystems call this from ->readpages() to check whether the pages need to
+ * Filesystems call this from ->readahead() to check whether the pages need to
  * be verified or not.  Don't use IS_VERITY() for this purpose; it's subject to
  * a race condition where the file is being read concurrently with
  * FS_IOC_ENABLE_VERITY completing.  (S_VERITY is set before ->i_verity_info.)
@@ -232,5 +232,19 @@ static inline bool fsverity_active(const struct inode *inode)
 {
 	return fsverity_get_info(inode) != NULL;
 }
+
+#ifdef CONFIG_FS_VERITY_BUILTIN_SIGNATURES
+int __fsverity_verify_signature(const struct inode *inode, const u8 *signature,
+				size_t sig_size, const u8 *file_digest,
+				unsigned int digest_algorithm);
+#else /* !CONFIG_FS_VERITY_BUILTIN_SIGNATURES */
+static inline int __fsverity_verify_signature(const struct inode *inode,
+				const u8 *signature, size_t sig_size,
+				const u8 *file_digest,
+				unsigned int digest_algorithm)
+{
+	return 0;
+}
+#endif /* !CONFIG_FS_VERITY_BUILTIN_SIGNATURES */
 
 #endif	/* _LINUX_FSVERITY_H */

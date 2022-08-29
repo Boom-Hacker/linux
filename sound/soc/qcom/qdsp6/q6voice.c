@@ -22,6 +22,7 @@ struct q6voice_path {
 	struct q6voice *v;
 
 	enum q6voice_path_type type;
+	int tx_port, rx_port;
 	/* Serialize access to voice path session */
 	struct mutex lock;
 	struct q6voice_path_runtime *runtime;
@@ -30,8 +31,6 @@ struct q6voice_path {
 struct q6voice {
 	struct device *dev;
 	struct q6voice_path paths[Q6VOICE_PATH_COUNT];
-	u16 port_rx;
-	u16 port_tx;
 };
 
 static int q6voice_path_start(struct q6voice_path *p)
@@ -53,8 +52,8 @@ static int q6voice_path_start(struct q6voice_path *p)
 	cvp = p->runtime->sessions[Q6VOICE_SERVICE_CVP];
 	if (!cvp) {
 		cvp = q6cvp_session_create(p->type,
-					   q6afe_get_port_id(p->v->port_tx),
-					   q6afe_get_port_id(p->v->port_rx));
+					   q6afe_get_port_id(p->tx_port),
+					   q6afe_get_port_id(p->rx_port));
 		if (IS_ERR(cvp))
 			return PTR_ERR(cvp);
 		p->runtime->sessions[Q6VOICE_SERVICE_CVP] = cvp;
@@ -237,29 +236,27 @@ struct q6voice *q6voice_create(struct device *dev)
 }
 EXPORT_SYMBOL_GPL(q6voice_create);
 
-unsigned int q6voice_get_port(struct q6voice *v, enum q6voice_port_type type)
+int q6voice_get_port(struct q6voice *v, enum q6voice_path_type path,
+		     bool capture)
 {
-	switch (type) {
-	case Q6VOICE_PORT_RX:
-		return v->port_rx;
-	case Q6VOICE_PORT_TX:
-		return v->port_tx;
-	}
+	struct q6voice_path *p = &v->paths[path];
 
-	return -EINVAL;
+	if (capture)
+		return p->tx_port;
+	else
+		return p->rx_port;
 }
 EXPORT_SYMBOL_GPL(q6voice_get_port);
 
-void q6voice_set_port(struct q6voice *v, enum q6voice_port_type type, int index)
+void q6voice_set_port(struct q6voice *v, enum q6voice_path_type path,
+		      bool capture, int index)
 {
-	switch (type) {
-	case Q6VOICE_PORT_RX:
-		v->port_rx = index;
-		break;
-	case Q6VOICE_PORT_TX:
-		v->port_tx = index;
-		break;
-	}
+	struct q6voice_path *p = &v->paths[path];
+
+	if (capture)
+		p->tx_port = index;
+	else
+		p->rx_port = index;
 }
 EXPORT_SYMBOL_GPL(q6voice_set_port);
 

@@ -186,16 +186,6 @@
 &blsp_i2c2 {
 	status = "okay";
 
-	light-sensor@23 {
-		compatible = "liteon,ltr559";
-		reg = <0x23>;
-		vdd-supply = <&pm8916_l17>;
-		vio-supply = <&pm8916_l6>;
-
-		interrupt-parent = <&msmgpio>;
-		interrupts = <115 IRQ_TYPE_EDGE_FALLING>;
-	};
-
 	accelerometer@10 {
 		compatible = "bosch,bmc156_accel";
 		reg = <0x10>;
@@ -232,6 +222,21 @@
 
 		vdd-supply = <&pm8916_l17>;
 		vddio-supply = <&pm8916_l6>;
+	};
+
+	light-sensor@23 {
+		compatible = "liteon,ltr559";
+		reg = <0x23>;
+		proximity-near-level = <75>;
+
+		interrupt-parent = <&msmgpio>;
+		interrupts = <115 IRQ_TYPE_EDGE_FALLING>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&light_int_default>;
+
+		vdd-supply = <&pm8916_l17>;
+		vio-supply = <&pm8916_l6>;
 	};
 
 	gyroscope@68 {
@@ -535,6 +540,14 @@
 
 	gyro_int_default: gyro-int-default {
 		pins = "gpio22", "gpio23";
+		function = "gpio";
+
+		drive-strength = <2>;
+		bias-disable;
+	};
+
+	light_int_default: light-int-default {
+		pins = "gpio115";
 		function = "gpio";
 
 		drive-strength = <2>;

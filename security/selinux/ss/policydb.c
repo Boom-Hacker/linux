@@ -41,8 +41,6 @@
 #include "mls.h"
 #include "services.h"
 
-#define _DEBUG_HASHES
-
 #ifdef DEBUG_HASHES
 static const char *symtab_name[SYM_NUM] = {
 	"common prefixes",
@@ -704,7 +702,7 @@ static void symtab_hash_eval(struct symtab *s)
 }
 
 #else
-static inline void hash_eval(struct hashtab *h, char *hash_name)
+static inline void hash_eval(struct hashtab *h, const char *hash_name)
 {
 }
 #endif
@@ -2490,6 +2488,14 @@ int policydb_read(struct policydb *p, void *fp)
 	}
 	p->reject_unknown = !!(le32_to_cpu(buf[1]) & REJECT_UNKNOWN);
 	p->allow_unknown = !!(le32_to_cpu(buf[1]) & ALLOW_UNKNOWN);
+
+	if ((le32_to_cpu(buf[1]) & POLICYDB_CONFIG_ANDROID_NETLINK_ROUTE)) {
+		p->android_netlink_route = 1;
+	}
+
+	if ((le32_to_cpu(buf[1]) & POLICYDB_CONFIG_ANDROID_NETLINK_GETNEIGH)) {
+		p->android_netlink_getneigh = 1;
+	}
 
 	if (p->policyvers >= POLICYDB_VERSION_POLCAP) {
 		rc = ebitmap_read(&p->policycaps, fp);

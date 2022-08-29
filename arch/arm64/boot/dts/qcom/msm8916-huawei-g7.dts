@@ -219,7 +219,7 @@
 
 &dsi0 {
 	panel@0 {
-		compatible = "huawei,tianma-nt35521";
+		compatible = "huawei,g7-panel";
 		reg = <0>;
 
 		vsp-supply = <&reg_lcd_pos>;

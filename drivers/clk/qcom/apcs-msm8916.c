@@ -17,10 +17,9 @@
 #include "clk-regmap.h"
 #include "clk-regmap-mux-div.h"
 
-static const u32 map_of_parents[] = { 0, 4, 5 };
+static const u32 gpll0_a53cc_map[] = { 4, 5 };
 
 static const struct clk_parent_data pdata[] = {
-	{ .fw_name = "ref", .name = "xo", },
 	{ .fw_name = "aux", .name = "gpll0_vote", },
 	{ .fw_name = "pll", .name = "a53pll", },
 };
@@ -51,7 +50,6 @@ static int qcom_apcs_msm8916_clk_probe(struct platform_device *pdev)
 	struct clk_regmap_mux_div *a53cc;
 	struct regmap *regmap;
 	struct clk_init_data init = { };
-	int clk_count;
 	int ret = -ENODEV;
 
 	regmap = dev_get_regmap(parent, NULL);
@@ -82,10 +80,9 @@ static int qcom_apcs_msm8916_clk_probe(struct platform_device *pdev)
 	a53cc->hid_shift = 0;
 	a53cc->src_width = 3;
 	a53cc->src_shift = 8;
-	a53cc->parent_map = map_of_parents;
+	a53cc->parent_map = gpll0_a53cc_map;
 
-	clk_count = of_clk_get_parent_count(parent->of_node);
-	a53cc->pclk = devm_clk_get(parent, (clk_count > 1) ? "pll" : NULL);
+	a53cc->pclk = devm_clk_get(parent, NULL);
 	if (IS_ERR(a53cc->pclk)) {
 		ret = PTR_ERR(a53cc->pclk);
 		if (ret != -EPROBE_DEFER)

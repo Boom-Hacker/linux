@@ -7,7 +7,6 @@
 #include <sound/soc.h>
 #include <dt-bindings/sound/qcom,q6afe.h>
 #include <dt-bindings/sound/qcom,q6voice.h>
-#include "q6afe.h"
 #include "q6voice.h"
 
 #define DRV_NAME	"q6voice-dai"
@@ -85,32 +84,10 @@ static int q6voice_get_mixer(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct q6voice *v = snd_soc_component_get_drvdata(c);
+	bool capture = !!mc->shift;
 
-	switch (mc->reg) {
-	case PRIMARY_MI2S_TX:
-	case SECONDARY_MI2S_TX:
-	case TERTIARY_MI2S_TX:
-	case QUATERNARY_MI2S_TX:
-	case QUINARY_MI2S_TX:
-		if (q6voice_get_port(v, Q6VOICE_PORT_TX) == mc->reg)
-			ucontrol->value.integer.value[0] = 1;
-		else
-			ucontrol->value.integer.value[0] = 0;
-		break;
-	case PRIMARY_MI2S_RX:
-	case SECONDARY_MI2S_RX:
-	case TERTIARY_MI2S_RX:
-	case QUATERNARY_MI2S_RX:
-	case QUINARY_MI2S_RX:
-		if (q6voice_get_port(v, Q6VOICE_PORT_RX) == mc->reg)
-			ucontrol->value.integer.value[0] = 1;
-		else
-			ucontrol->value.integer.value[0] = 0;
-		break;
-	default:
-		dev_err(c->dev, "%s: invalid mixer request: %d\n", __func__, mc->reg);
-	}
-
+	ucontrol->value.integer.value[0] =
+		q6voice_get_port(v, Q6VOICE_PATH_VOICE, capture) == mc->reg;
 	return 0;
 }
 
@@ -121,45 +98,28 @@ static int q6voice_put_mixer(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct q6voice *v = snd_soc_component_get_drvdata(c);
-	struct snd_soc_dapm_update *update = NULL;
+	bool val = !!ucontrol->value.integer.value[0];
+	bool capture = !!mc->shift;
 
-	switch (mc->reg) {
-	case PRIMARY_MI2S_TX:
-	case SECONDARY_MI2S_TX:
-	case TERTIARY_MI2S_TX:
-	case QUATERNARY_MI2S_TX:
-	case QUINARY_MI2S_TX:
-		q6voice_set_port(v, Q6VOICE_PORT_TX, mc->reg);
-		break;
-	case PRIMARY_MI2S_RX:
-	case SECONDARY_MI2S_RX:
-	case TERTIARY_MI2S_RX:
-	case QUATERNARY_MI2S_RX:
-	case QUINARY_MI2S_RX:
-		q6voice_set_port(v, Q6VOICE_PORT_RX, mc->reg);
-		break;
-	default:
-		dev_err(c->dev, "%s: invalid mixer setting: %d\n", __func__, mc->reg);
-	}
+	if (val)
+		q6voice_set_port(v, Q6VOICE_PATH_VOICE, capture, mc->reg);
+	else if (q6voice_get_port(v, Q6VOICE_PATH_VOICE, capture) == mc->reg)
+		q6voice_set_port(v, Q6VOICE_PATH_VOICE, capture, 0);
 
-	if (ucontrol->value.integer.value[0])
-		snd_soc_dapm_mixer_update_power(dapm, kcontrol, 1, update);
-	else
-		snd_soc_dapm_mixer_update_power(dapm, kcontrol, 0, update);
-
+	snd_soc_dapm_mixer_update_power(dapm, kcontrol, val, NULL);
 	return 1;
 }
 
 static const struct snd_kcontrol_new voice_tx_mixer_controls[] = {
-	SOC_SINGLE_EXT("PRI_MI2S_TX", PRIMARY_MI2S_TX, 0, 1, 0,
+	SOC_SINGLE_EXT("PRI_MI2S_TX", PRIMARY_MI2S_TX, 1, 1, 0,
 		       q6voice_get_mixer, q6voice_put_mixer),
-	SOC_SINGLE_EXT("SEC_MI2S_TX", SECONDARY_MI2S_TX, 0, 1, 0,
+	SOC_SINGLE_EXT("SEC_MI2S_TX", SECONDARY_MI2S_TX, 1, 1, 0,
 		       q6voice_get_mixer, q6voice_put_mixer),
-	SOC_SINGLE_EXT("TERT_MI2S_TX", TERTIARY_MI2S_TX, 0, 1, 0,
+	SOC_SINGLE_EXT("TERT_MI2S_TX", TERTIARY_MI2S_TX, 1, 1, 0,
 		       q6voice_get_mixer, q6voice_put_mixer),
-	SOC_SINGLE_EXT("QUAT_MI2S_TX", QUATERNARY_MI2S_TX, 0, 1, 0,
+	SOC_SINGLE_EXT("QUAT_MI2S_TX", QUATERNARY_MI2S_TX, 1, 1, 0,
 		       q6voice_get_mixer, q6voice_put_mixer),
-	SOC_SINGLE_EXT("QUIN_MI2S_TX", QUINARY_MI2S_TX, 0, 1, 0,
+	SOC_SINGLE_EXT("QUIN_MI2S_TX", QUINARY_MI2S_TX, 1, 1, 0,
 		       q6voice_get_mixer, q6voice_put_mixer),
 };
 

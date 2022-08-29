@@ -4,7 +4,7 @@
 
 #include "msm8939.dtsi"
 #include "pm8916.dtsi"
-#include "msm8916-modem.dtsi"
+#include "msm8939-modem.dtsi"
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
@@ -28,6 +28,7 @@
 	};
 
 	reserved-memory {
+		/delete-node/ venus@8c300000;
 
 		cont_splash_mem: framebuffer@83000000 {
 			compatible = "removed-dma-pool";
@@ -37,6 +38,11 @@
 
 		gps_mem: gps@8c400000 {
 			reg = <0x0 0x8c400000 0x0 0x200000>;
+			no-map;
+		};
+
+		venus_mem: venus@90000000 {
+			reg = <0x0 0x90000000 0x0 0x800000>;
 			no-map;
 		};
 
@@ -75,6 +81,24 @@
 			linux,code = <KEY_VOLUMEUP>;
 			wakeup-source;
 			debounce-interval = <15>;
+		};
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		led-0 {
+			gpios = <&msmgpio 32 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "torch";
+			function = LED_FUNCTION_TORCH;
+		};
+
+		/* needed in addition to si-en,sn3190 led controller */
+		led-1 {
+			gpios = <&msmgpio 108 GPIO_ACTIVE_HIGH>;
+			function = LED_FUNCTION_INDICATOR;
+			color = <LED_COLOR_ID_WHITE>;
+			default-state = "on";
 		};
 	};
 
@@ -255,6 +279,8 @@
 		onnn,vsel-gpio = <&msmgpio 111 GPIO_ACTIVE_LOW>;
 		onnn,discharge-enable;
 		onnn,restore-reg;
+		onnn,set-en-always;
+		onnn,register-corruption-workaround;
 	};
 
 	speaker_codec_top: audio-codec@34 {
@@ -280,19 +306,17 @@
 	};
 
 	led-controller@68 {
-		compatible = "si-en,sn31xx";
+		compatible = "si-en,sn3190";
 		reg = <0x68>;
+		shutdown-gpios = <&msmgpio 9 GPIO_ACTIVE_HIGH>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		vio-supply = <&pm8916_l6>;
 
-		led@0 {
-			reg = <0>;
+		led@1 {
+			reg = <1>;
+			led-max-microamp = <5000>;
 			function = LED_FUNCTION_INDICATOR;
 			color = <LED_COLOR_ID_WHITE>;
-			led-max-microamp = <10000>; //5000>;
-			enable-gpios = <&msmgpio 108 GPIO_ACTIVE_HIGH>;
-			enable2-gpios = <&msmgpio 9 GPIO_ACTIVE_HIGH>;
 		};
 	};
 };
@@ -307,13 +331,13 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&ts_int_active &ts_reset_active>;
 		interrupt-parent = <&msmgpio>;
-		interrupts = <13 0x2008>;
+		interrupts = <13 IRQ_TYPE_LEVEL_LOW>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 
 		syna,startup-delay-ms = <100>;
 
-		rmi4-f01@01 {
+		rmi4-f01@1 {
 			reg = <0x1>;
 			syna,nosleep-mode = <1>;
 		};
@@ -333,7 +357,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&ts_int_active &ts_reset_active>;
 		interrupt-parent = <&msmgpio>;
-		interrupts = <13 0x2008>;
+		interrupts = <13 IRQ_TYPE_LEVEL_LOW>;
 		reset-gpios = <&msmgpio 12 GPIO_ACTIVE_LOW>;
 
 		touchscreen-size-x = <1080>;
@@ -341,7 +365,18 @@
 	};
 };
 
-&dsi0 {
+&lpass {
+	status = "okay";
+};
+
+&mdss {
+	status = "okay";
+};
+
+&mdss_dsi0 {
+	status = "okay";
+	vdda-supply = <&pm8916_l2>;
+	vddio-supply = <&pm8916_l6>;
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&mdss_default>;
 	pinctrl-1 = <&mdss_sleep>;
@@ -381,12 +416,10 @@
 	};
 };
 
-&dsi_phy0 {
-	qcom,dsi-phy-regulator-ldo-mode;
-};
-
-&mdss {
+&mdss_dsi0_phy {
 	status = "okay";
+	vddio-supply = <&pm8916_l6>;
+	qcom,dsi-phy-regulator-ldo-mode;
 };
 
 &pm8916_pwm {
@@ -404,13 +437,6 @@
 	status = "okay";
 };
 
-&pronto {
-	status = "okay";
-	iris {
-		compatible = "qcom,wcn3660b";
-	};
-};
-
 &q6afedai {
 	dai@18 {
 		reg = <SECONDARY_MI2S_RX>;
@@ -420,6 +446,13 @@
 	dai@22 {
 		reg = <QUATERNARY_MI2S_RX>;
 		qcom,sd-lines = <0>;
+	};
+};
+
+&remoteproc_pronto {
+	status = "okay";
+	iris {
+		compatible = "qcom,wcn3660b";
 	};
 };
 
@@ -435,7 +468,7 @@
 };
 
 &sdhc_2 {
-	status = "disabled";
+	status = "okay";
 
 	vmmc-supply = <&pm8916_l11>;
 	vqmmc-supply = <&pm8916_l12>;

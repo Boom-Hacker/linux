@@ -24,10 +24,6 @@
  *  Author: Vincent Guittot <vincent.guittot@linaro.org>
  */
 
-#include <linux/sched.h>
-#include "sched.h"
-#include "pelt.h"
-
 /*
  * Approximate:
  *   val * y^n,    where y^32 ~= 0.5 (~1 scheduling period)
@@ -306,6 +302,7 @@ int __update_load_avg_blocked_se(u64 now, struct sched_entity *se)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(__update_load_avg_blocked_se);
 
 int __update_load_avg_se(u64 now, struct cfs_rq *cfs_rq, struct sched_entity *se)
 {

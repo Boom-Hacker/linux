@@ -41,8 +41,8 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&spk_ext_pa_default>;
 
-		enable-gpios = <&msmgpio 114 GPIO_ACTIVE_HIGH>;
-		aw8738,mode = <5>;
+		mode-gpios = <&msmgpio 114 GPIO_ACTIVE_HIGH>;
+		awinic,mode = <5>;
 		sound-name-prefix = "Speaker Amp";
 	};
 
@@ -190,13 +190,13 @@
 	status = "okay";
 
 	touchscreen@48 {
-		compatible = "himax,852x";
+		compatible = "himax,hx852x-es";
 		reg = <0x48>;
 
 		interrupt-parent = <&msmgpio>;
 		interrupts = <13 IRQ_TYPE_LEVEL_LOW>;
 
-		reset-gpio = <&msmgpio 12 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&msmgpio 12 GPIO_ACTIVE_LOW>;
 
 		vcca-supply = <&reg_ts_vcca>;
 		vccd-supply = <&pm8916_l6>;
@@ -287,8 +287,15 @@
 	status = "okay";
 
 	model = "bq-paella";
+	widgets =
+		"Speaker", "Speaker",
+		"Headphone", "Headphones";
+	pin-switches = "Speaker";
 	audio-routing =
-		"Speaker Amp IN", "HPH_R_EXT",
+		"Speaker", "Speaker Amp OUT",
+		"Speaker Amp IN", "HPH_R",
+		"Headphones", "HPH_L",
+		"Headphones", "HPH_R",
 		"AMIC1", "MIC BIAS External1",
 		"AMIC2", "MIC BIAS Internal2",
 		"AMIC3", "MIC BIAS External1";

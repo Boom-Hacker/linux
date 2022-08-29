@@ -260,13 +260,6 @@ config LEDS_NET48XX
 	  This option enables support for the Soekris net4801 and net4826 error
 	  LED.
 
-config LEDS_FSG
-	tristate "LED Support for the Freecom FSG-3"
-	depends on LEDS_CLASS
-	depends on MACH_FSG
-	help
-	  This option enables support for the LEDs on the Freecom FSG-3.
-
 config LEDS_WRAP
 	tristate "LED Support for the WRAP series LEDs"
 	depends on LEDS_CLASS
@@ -704,7 +697,7 @@ config LEDS_MENF21BMC
 
 config LEDS_IS31FL319X
 	tristate "LED Support for ISSI IS31FL319x I2C LED controller family"
-	depends on LEDS_CLASS && I2C && OF
+	depends on LEDS_CLASS && I2C
 	select REGMAP_I2C
 	help
 	  This option enables support for LEDs connected to ISSI IS31FL319x
@@ -753,15 +746,6 @@ config LEDS_POWERNV
 	  PowerNV platforms. Say 'y' to enable this support in kernel.
 	  To compile this driver as a module, choose 'm' here: the module
 	  will be called leds-powernv.
-
-config LEDS_QCOM_LPG
-	tristate "LED support for Qualcomm LPG"
-	depends on LEDS_CLASS_MULTICOLOR
-	depends on OF
-	depends on SPMI
-	help
-	  This option enables support for the Light Pulse Generator found in a
-	  wide variety of Qualcomm PMICs.
 
 config LEDS_SYSCON
 	bool "LED support for LEDs on system controllers"
@@ -880,19 +864,18 @@ config LEDS_ACER_A500
 	  This option enables support for the Power Button LED of
 	  Acer Iconia Tab A500.
 
-config LEDS_SN31XX
-	tristate "LED support for the SN31XX"
-	depends on LEDS_CLASS
-	depends on I2C && OF
-	help
-	  This option enables support for the SN31XX LED driver.
-
 source "drivers/leds/blink/Kconfig"
 
 comment "Flash and Torch LED drivers"
 source "drivers/leds/flash/Kconfig"
 
+comment "RGB LED drivers"
+source "drivers/leds/rgb/Kconfig"
+
 comment "LED Triggers"
 source "drivers/leds/trigger/Kconfig"
+
+comment "Simple LED drivers"
+source "drivers/leds/simple/Kconfig"
 
 endif # NEW_LEDS

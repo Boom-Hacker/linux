@@ -122,11 +122,9 @@
 
 	muic: extcon@25 {
 		compatible = "siliconmitus,sm5502-muic";
-
 		reg = <0x25>;
 		interrupt-parent = <&msmgpio>;
 		interrupts = <12 IRQ_TYPE_EDGE_FALLING>;
-
 		pinctrl-names = "default";
 		pinctrl-0 = <&muic_int_default>;
 	};
@@ -137,14 +135,14 @@
 
 	accelerometer@1d {
 		compatible = "st,lis2hh12";
+		reg = <0x1d>;
+
+		interrupt-parent = <&msmgpio>;
+		interrupts = <115 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "INT1";
 
 		vdd-supply = <&pm8916_l17>;
 		vddio-supply = <&pm8916_l5>;
-
-		reg = <0x1d>;
-		interrupt-parent = <&msmgpio>;
-		interrupts = <115 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "INT1";
 
 		st,drdy-int-pin = <1>;
 
@@ -160,7 +158,7 @@
 		compatible = "atmel,maxtouch";
 		reg = <0x4a>;
 		interrupt-parent = <&msmgpio>;
-		interrupts = <13 IRQ_TYPE_EDGE_FALLING>;
+		interrupts = <13 IRQ_TYPE_LEVEL_LOW>;
 
 		vdd-supply = <&reg_tsp_1p8v>;
 		vdda-supply = <&reg_tsp_3p3v>;
